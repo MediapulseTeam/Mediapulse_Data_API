@@ -168,6 +168,18 @@ def get_data(server, auth_token, site_id, view_id):
     _check_status(server_response, 200)
     return server_response.text
 
+def get_data_for_date(server, auth_token, site_id, view_id, year: int, month: int, day: int):
+    """
+    Returns the data for a view
+    """
+    url = server + "/api/{0}/sites/{1}/views/{2}/data".format(VERSION, site_id, view_id)
+    url = url + f'?vf_Date={year}-{month}-{day}'
+    server_response = requests.get(url, headers={'x-tableau-auth': auth_token})
+    server_response.encoding = 'utf-8'
+    _check_status(server_response, 200)
+    return server_response.text
+
+
 def trim_newline(data):
     data = data.replace('\n', '')
     return data
@@ -177,6 +189,16 @@ def format_numbers(data: pd.DataFrame, col: str):
     data[col].replace(',', '', inplace=True, regex=True)
     return data
 
+
+def post_process(data: str) -> pd.DataFrame:
+    data = trim_newline(data)
+    data= data.rstrip("\r") # remove last empty line
+    if data == '': return None
+    data_df = pd.DataFrame([x.split(';') for x in data.split('\r')])
+    data_df = data_df.rename(columns=data_df.iloc[0]).drop(data_df.index[0])
+    # Depending on the view you are accessing, you might need to adapt the following line
+    data_df = format_numbers(data_df, 'Measure Values')
+    return data_df
 
 def main():
     server = Config.server
@@ -221,18 +243,20 @@ def main():
             return 0
 
     print("-------------------- data -------------------")
-    data = get_data(server, auth_token, site_id, Config.view)
-    data = trim_newline(data)
-    data_df = pd.DataFrame([x.split(';') for x in data.split('\r')])
-    data_df = data_df.rename(columns=data_df.iloc[0]).drop(data_df.index[0])
-
-    # Depending on the view you are accessing, you might need to adapt the following line
-    data_df = format_numbers(data_df, 'Measure Values')
-
+    data_df = post_process(get_data(server, auth_token, site_id, Config.view))
     '''
     Do whatever you want with the data you recive in the following section
     '''
-    data_df.to_csv('data.csv', index=False, encoding='utf-8')
+    if not data_df is None:
+        data_df.to_csv('data.csv', index=False, encoding='utf-8')
+
+    print("-------------------- data filtered by day-------------------")
+    data_df = post_process(get_data_for_date(server, auth_token, site_id, Config.view, year=2022, month=5, day=1))
+    '''
+    Do whatever you want with the data you recive in the following section
+    '''
+    if not data_df is None:
+        data_df.to_csv('data_filtered.csv', index=False, encoding='utf-8')
 
     print("\nSigning out and invalidating the authentication token")
     sign_out(server, auth_token)
