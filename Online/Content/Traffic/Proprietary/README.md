@@ -36,4 +36,5 @@ You can alter the script according the documentation here: https://help.tableau.
 
 The code was adapted from the Tableau source on github: https://github.com/tableau/rest-api-samples
 
+
 If you have any questions, please contact data@mediapulse.ch.
