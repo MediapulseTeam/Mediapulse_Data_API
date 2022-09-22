@@ -35,3 +35,6 @@ python get_data.py
 You can alter the script according the documentation here: https://help.tableau.com/current/api/rest_api/en-us/REST/rest_api.htm
 
 The code was adapted from the Tableau source on github: https://github.com/tableau/rest-api-samples
+
+
+If you have any questions, please contact data@mediapulse.ch.
