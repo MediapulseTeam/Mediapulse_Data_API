@@ -1,7 +1,3 @@
-# pylint: disable=C0301
-#
-#
-# keep long urls on one line for readabilty
 """
 # This script prints out users by Tableau Server group by site
 #
@@ -27,12 +23,16 @@ import getpass
 import requests # Contains methods used to make HTTP requests
 import pandas as pd
 from version import VERSION
+from datetime import date
 
 from configuration.secrets import Config
+from configuration.config import workbook_config
 
 # The namespace for the REST API is 'http://tableausoftware.com/api' for Tableau Server 9.0
 # or 'http://tableau.com/api' for Tableau Server 9.1 or later
 XMLNS = {'t': 'http://tableau.com/api'}
+
+ENCODING = 'utf-8'
 
 # If using python version 3.x, 'raw_input()' is changed to 'input()'
 if sys.version[0] == '3': raw_input=input
@@ -53,7 +53,7 @@ def _encode_for_display(text):
     Returns an ASCII-encoded version of the text.
     Unicode characters are converted to ASCII placeholders (for example, "?").
     """
-    return text.encode('ascii', errors="backslashreplace").decode('utf-8')
+    return text.encode('ascii', errors="backslashreplace").decode(ENCODING)
 
 def _check_status(server_response, success_code):
     """
@@ -164,7 +164,7 @@ def get_data(server, auth_token, site_id, view_id):
     """
     url = server + "/api/{0}/sites/{1}/views/{2}/data".format(VERSION, site_id, view_id)
     server_response = requests.get(url, headers={'x-tableau-auth': auth_token})
-    server_response.encoding = 'utf-8'
+    server_response.encoding = ENCODING
     _check_status(server_response, 200)
     return server_response.text
 
@@ -175,7 +175,7 @@ def get_data_for_date(server, auth_token, site_id, view_id, year: int, month: in
     url = server + "/api/{0}/sites/{1}/views/{2}/data".format(VERSION, site_id, view_id)
     url = url + f'?vf_Date={year}-{month}-{day}'
     server_response = requests.get(url, headers={'x-tableau-auth': auth_token})
-    server_response.encoding = 'utf-8'
+    server_response.encoding = ENCODING
     _check_status(server_response, 200)
     return server_response.text
 
@@ -196,11 +196,13 @@ def post_process(data: str) -> pd.DataFrame:
     if data == '': return None
     data_df = pd.DataFrame([x.split(';') for x in data.split('\r')])
     data_df = data_df.rename(columns=data_df.iloc[0]).drop(data_df.index[0])
-    # Depending on the view you are accessing, you might need to adapt the following line
-    data_df = format_numbers(data_df, 'Measure Values')
+    # Depending on the view you are accessing, you might need to adapt the following lines
+    if 'Measure Values' in data_df:
+        data_df = format_numbers(data_df, 'Measure Values')
     return data_df
 
-def main():
+
+def get_data_with_rest():
     server = Config.server
     username = Config.username
     password = Config.password
@@ -218,49 +220,30 @@ def main():
     if password == "":
         password = getpass.getpass("Password: ")
 
-    # Fix up the site id and group name - blank indicates default value
-    if site_id == "Default":
-        site_id = ""
-
     print("\nSigning in to obtain authentication token")
     auth_token, site_id = sign_in(server, username, password, site_id)
 
-    if Config.workbook.startswith('['):
-        # get all the workbooks in the site
-        sites = get_workbooks(server, auth_token, site_id)
-        for s in sites:
-            print("------ Available Workbooks --------")
-            print(s)
-            print("--> Fill in the Ids of the needed Workbook in the secrets.py file")
-        return 0
-
-    if Config.view.startswith('['):
-        views = get_views(server, auth_token, site_id, Config.workbook)
-        for v in views:
-            print("------ Available Views --------")
-            print(v)
-            print("--> Fill in the Id of the needed View in the secrets.py file")
-            return 0
 
     print("-------------------- data -------------------")
-    data_df = post_process(get_data(server, auth_token, site_id, Config.view))
-    '''
-    Do whatever you want with the data you recive in the following section
-    '''
-    if not data_df is None:
-        data_df.to_csv('data.csv', index=False, encoding='utf-8')
+    for wb in workbook_config:
+        for view in wb.views:
+            data_df = post_process(get_data(server, auth_token, site_id, view.v_id))
+            '''
+            Do whatever you want with the data you receive in the following section
+            '''
+            if not data_df is None:
+                data_df.to_csv(view.v_name+"_rest.csv", index=False, encoding='utf-8')
 
     print("-------------------- data filtered by day-------------------")
-    data_df = post_process(get_data_for_date(server, auth_token, site_id, Config.view, year=2022, month=5, day=1))
+    # This section filters the data for a specific day. Adapt according to your needs.
+    d = date(year=2022, month=5, day=1)
+    view = workbook_config[0].views[0]
+    data_df = post_process(get_data_for_date(server, auth_token, site_id, view.v_id, year=d.year, month=d.month, day=d.day))
     '''
     Do whatever you want with the data you recive in the following section
     '''
     if not data_df is None:
-        data_df.to_csv('data_filtered.csv', index=False, encoding='utf-8')
+        data_df.to_csv(view.v_name+"_"+d.strftime('%y%m%d')+".csv", index=False, encoding='utf-8')
 
     print("\nSigning out and invalidating the authentication token")
     sign_out(server, auth_token)
-
-
-if __name__ == "__main__":
-    main()
