@@ -22,17 +22,20 @@ import sys
 import getpass
 import requests # Contains methods used to make HTTP requests
 import pandas as pd
+import numpy
 from version import VERSION
-from datetime import date
+from datetime import date, timedelta
+from typing import List
 
 from configuration.secrets import Config
-from configuration.config import workbook_config
+from configuration.config import workbook_config, START_DATE
 
 # The namespace for the REST API is 'http://tableausoftware.com/api' for Tableau Server 9.0
 # or 'http://tableau.com/api' for Tableau Server 9.1 or later
 XMLNS = {'t': 'http://tableau.com/api'}
 
 ENCODING = 'utf-8'
+CHUNK_DAYS = 30
 
 # If using python version 3.x, 'raw_input()' is changed to 'input()'
 if sys.version[0] == '3': raw_input=input
@@ -158,15 +161,34 @@ def get_views(server, auth_token, site_id, workbook_id):
         all.append([view.get('name'),view.get('id')])
     return all
 
+
 def get_data(server, auth_token, site_id, view_id):
     """
-    Returns the data for a view
+    Returns the data for a view in a string
     """
     url = server + "/api/{0}/sites/{1}/views/{2}/data".format(VERSION, site_id, view_id)
-    server_response = requests.get(url, headers={'x-tableau-auth': auth_token})
-    server_response.encoding = ENCODING
-    _check_status(server_response, 200)
-    return server_response.text
+    data_list = _get_date_list(start_year=START_DATE.year, start_month=START_DATE.month, start_day=START_DATE.day)
+    nb_of_chunks = round((date.today()-START_DATE).days/CHUNK_DAYS)
+    data_chunks = numpy.array_split(data_list, nb_of_chunks)
+    out = ""
+    for chunk in data_chunks:
+        chunk_string = ','.join([str(item) for item in chunk])
+        chunk_url = url + f'?vf_Date={chunk_string}'
+        server_response = requests.get(chunk_url, headers={'x-tableau-auth': auth_token})
+        server_response.encoding = ENCODING
+        _check_status(server_response, 200)
+        out += server_response.text
+    return out
+
+
+def _get_date_list(start_year: int, start_month: int, start_day: int) -> List:
+    end_date = date.today()
+    start_date = date(year=start_year, month=start_month, day=start_day)
+    all_dates = []
+    for n in range(int((end_date - start_date).days) + 1):
+        all_dates.append((start_date + timedelta(n)).strftime("%Y-%m-%d"))
+    return all_dates
+
 
 def get_data_for_date(server, auth_token, site_id, view_id, year: int, month: int, day: int):
     """
@@ -225,15 +247,13 @@ def get_data_with_rest():
 
 
     print("-------------------- data -------------------")
+
     for wb in workbook_config:
         for view in wb.views:
             data_df = post_process(get_data(server, auth_token, site_id, view.v_id))
-            '''
-            Do whatever you want with the data you receive in the following section
-            '''
+            # Do whatever you want with the data you receive in the following section
             if not data_df is None:
-                data_df.to_csv(view.v_name+"_rest.csv", index=False, encoding='utf-8')
-
+                data_df.to_csv(view.v_name+"_rest.csv", index=False, encoding=ENCODING)
     print("-------------------- data filtered by day-------------------")
     # This section filters the data for a specific day. Adapt according to your needs.
     d = date(year=2022, month=5, day=1)
@@ -243,7 +263,7 @@ def get_data_with_rest():
     Do whatever you want with the data you recive in the following section
     '''
     if not data_df is None:
-        data_df.to_csv(view.v_name+"_"+d.strftime('%y%m%d')+".csv", index=False, encoding='utf-8')
+        data_df.to_csv(view.v_name+"_"+d.strftime('%y%m%d')+".csv", index=False, encoding=ENCODING)
 
     print("\nSigning out and invalidating the authentication token")
     sign_out(server, auth_token)
