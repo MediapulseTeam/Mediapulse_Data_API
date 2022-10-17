@@ -257,7 +257,7 @@ def get_data_with_rest():
     print("-------------------- data filtered by day-------------------")
     # This section filters the data for a specific day. Adapt according to your needs.
     d = date(year=2022, month=5, day=1)
-    view = workbook_config[0].views[0]
+    view = workbook_config[0].views[1]
     data_df = post_process(get_data_for_date(server, auth_token, site_id, view.v_id, year=d.year, month=d.month, day=d.day))
     '''
     Do whatever you want with the data you recive in the following section
