@@ -22,6 +22,7 @@ import sys
 import getpass
 import requests # Contains methods used to make HTTP requests
 import pandas as pd
+
 import numpy
 from version import VERSION
 from datetime import date, timedelta
@@ -30,12 +31,15 @@ from typing import List
 from configuration.secrets import Config
 from configuration.config import workbook_config, START_DATE
 
+
 # The namespace for the REST API is 'http://tableausoftware.com/api' for Tableau Server 9.0
 # or 'http://tableau.com/api' for Tableau Server 9.1 or later
 XMLNS = {'t': 'http://tableau.com/api'}
 
 ENCODING = 'utf-8'
+
 CHUNK_DAYS = 30
+
 
 # If using python version 3.x, 'raw_input()' is changed to 'input()'
 if sys.version[0] == '3': raw_input=input
@@ -188,7 +192,7 @@ def _get_date_list(start_year: int, start_month: int, start_day: int) -> List:
     for n in range(int((end_date - start_date).days) + 1):
         all_dates.append((start_date + timedelta(n)).strftime("%Y-%m-%d"))
     return all_dates
-
+    
 
 def get_data_for_date(server, auth_token, site_id, view_id, year: int, month: int, day: int):
     """
@@ -245,7 +249,6 @@ def get_data_with_rest():
     print("\nSigning in to obtain authentication token")
     auth_token, site_id = sign_in(server, username, password, site_id)
 
-
     print("-------------------- data -------------------")
 
     for wb in workbook_config:
@@ -254,6 +257,7 @@ def get_data_with_rest():
             # Do whatever you want with the data you receive in the following section
             if not data_df is None:
                 data_df.to_csv(view.v_name+"_rest.csv", index=False, encoding=ENCODING)
+
     print("-------------------- data filtered by day-------------------")
     # This section filters the data for a specific day. Adapt according to your needs.
     d = date(year=2022, month=5, day=1)
