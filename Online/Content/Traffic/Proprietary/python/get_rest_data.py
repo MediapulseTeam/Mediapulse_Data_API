@@ -186,24 +186,8 @@ def get_data(server, auth_token, site_id, view_id, chunked):
     Returns the data for a view in a string
     """
     url = server + "/api/{0}/sites/{1}/views/{2}/data".format(VERSION, site_id, view_id)
-    if chunked:
-        out = get_chunked_data(auth_token, url)
-    else:
-        out = get_unchunked_data(auth_token, url)
-    return out
-
-
-def get_unchunked_data(auth_token, url):
-    server_response = requests.get(url, headers={'x-tableau-auth': auth_token})
-    server_response.encoding = ENCODING
-    _check_status(server_response, 200)
-    out = server_response.text
-    return out
-
-
-def get_chunked_data(auth_token, url):
     data_list = _get_date_list(start_year=START_DATE.year, start_month=START_DATE.month, start_day=START_DATE.day)
-    nb_of_chunks = round((date.today() - START_DATE).days / CHUNK_DAYS)
+    nb_of_chunks = round((date.today()-START_DATE).days/CHUNK_DAYS)
     data_chunks = numpy.array_split(data_list, nb_of_chunks)
     out = ""
     print(f"number of chunks: {len(data_chunks)}")
@@ -268,8 +252,7 @@ def get_data_with_rest():
     print("-------------------- data -------------------")
     for wb in workbook_config:
         for view in wb.views:
-            print(f'getting data for view: {view.v_name}')
-            data_df = post_process(get_data(server, auth_token, site_id, view.v_id, view.date_chunks))
+            data_df = post_process(get_data(server, auth_token, site_id, view.v_id))
             # Do whatever you want with the data you receive in the following section
             if not data_df is None:
                 data_df.to_csv(view.v_name+".csv", index=False, encoding=ENCODING)
