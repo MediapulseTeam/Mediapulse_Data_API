@@ -132,6 +132,25 @@ def sign_out(server, auth_token):
     return
 
 
+def setup_connection():
+    server = Config.server
+    username = Config.username
+    password = Config.password
+    site_id = Config.site_id
+    if len(sys.argv) > 1:
+        server = sys.argv[1]
+        username = sys.argv[2]
+    # Prompt for a username
+    if username == "":
+        username = raw_input("\nUser name: ")
+    # Prompt for password
+    if password == "":
+        password = getpass.getpass("Password: ")
+    print("\nSigning in to obtain authentication token")
+    auth_token, site_id = sign_in(server, username, password, site_id)
+    return auth_token, server, site_id
+
+
 def get_workbooks(server, auth_token, site_id):
     """
     Returns the workbooks for the site
@@ -162,7 +181,7 @@ def get_views(server, auth_token, site_id, workbook_id):
     return all
 
 
-def get_data(server, auth_token, site_id, view_id):
+def get_data(server, auth_token, site_id, view_id, chunked):
     """
     Returns the data for a view in a string
     """
@@ -171,6 +190,8 @@ def get_data(server, auth_token, site_id, view_id):
     nb_of_chunks = round((date.today()-START_DATE).days/CHUNK_DAYS)
     data_chunks = numpy.array_split(data_list, nb_of_chunks)
     out = ""
+    print(f"number of chunks: {len(data_chunks)}")
+    num = 0
     for chunk in data_chunks:
         chunk_string = ','.join([str(item) for item in chunk])
         chunk_url = url + f'?vf_Date={chunk_string}'
@@ -178,6 +199,8 @@ def get_data(server, auth_token, site_id, view_id):
         server_response.encoding = ENCODING
         _check_status(server_response, 200)
         out += server_response.text
+        num += 1
+        print(f'chunk number: {num}')
     return out
 
 
@@ -225,45 +248,33 @@ def post_process(data: str) -> pd.DataFrame:
 
 
 def get_data_with_rest():
-    server = Config.server
-    username = Config.username
-    password = Config.password
-    site_id = Config.site_id
-
-    if len(sys.argv) > 1:
-        server = sys.argv[1]
-        username = sys.argv[2]
-
-    # Prompt for a username
-    if username == "":
-        username = raw_input("\nUser name: ")
-
-    # Prompt for password
-    if password == "":
-        password = getpass.getpass("Password: ")
-
-    print("\nSigning in to obtain authentication token")
-    auth_token, site_id = sign_in(server, username, password, site_id)
-
-
+    auth_token, server, site_id = setup_connection()
     print("-------------------- data -------------------")
-
     for wb in workbook_config:
         for view in wb.views:
             data_df = post_process(get_data(server, auth_token, site_id, view.v_id))
             # Do whatever you want with the data you receive in the following section
             if not data_df is None:
-                data_df.to_csv(view.v_name+"_rest.csv", index=False, encoding=ENCODING)
+                data_df.to_csv(view.v_name+".csv", index=False, encoding=ENCODING)
+
+    print("\nSigning out and invalidating the authentication token")
+    sign_out(server, auth_token)
+
+
+def get_data_with_rest_for_date(date: date):
+    auth_token, server, site_id = setup_connection()
     print("-------------------- data filtered by day-------------------")
     # This section filters the data for a specific day. Adapt according to your needs.
-    d = date(year=2022, month=5, day=1)
-    view = workbook_config[0].views[1]
-    data_df = post_process(get_data_for_date(server, auth_token, site_id, view.v_id, year=d.year, month=d.month, day=d.day))
-    '''
-    Do whatever you want with the data you recive in the following section
-    '''
-    if not data_df is None:
-        data_df.to_csv(view.v_name+"_"+d.strftime('%y%m%d')+".csv", index=False, encoding=ENCODING)
+    for wb in workbook_config:
+        for view in wb.views:
+            if view.date_chunks:
+                data_df = post_process(get_data_for_date(server, auth_token, site_id, view.v_id,
+                                             year=date.year, month=date.month, day=date.day))
+                '''
+                Do whatever you want with the data you recive in the following section
+                '''
+                if not data_df is None:
+                    data_df.to_csv(view.v_name+"_"+date.strftime('%y%m%d')+".csv", index=False, encoding=ENCODING)
 
     print("\nSigning out and invalidating the authentication token")
     sign_out(server, auth_token)
