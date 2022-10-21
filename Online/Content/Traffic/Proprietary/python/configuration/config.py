@@ -16,6 +16,7 @@ class WorkbookConfig:
     wb_id: str
     views: List[ViewConfig]
 
+
 START_DATE = date(year=2021, month=6, day=1)
 
 workbook_config = [
