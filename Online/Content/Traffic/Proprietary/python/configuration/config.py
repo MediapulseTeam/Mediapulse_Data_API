@@ -16,22 +16,22 @@ class WorkbookConfig:
     wb_id: str
     views: List[ViewConfig]
 
-START_DATE = date(year=2021, month=6, day=1)
+START_DATE = date(year=2022, month=4, day=1)
 
 workbook_config = [
     WorkbookConfig(wb_name="ProprietaryAPITrafficDashboards",
                    wb_id="79119cc9-7a49-4117-9c3e-84b385e307be",
-                   views=[ViewConfig(v_name="Brand Summary Data",
-                                     v_id='1ea0644b-15f7-4cf6-8a8d-f5be20de710d',
+                   views=[ViewConfig(v_name="Brand Total Daily",
+                                     v_id='c4a00b70-f0e1-4d5f-bbfb-fcb782916652',
                                      date_chunks=False),
-                          ViewConfig(v_name="Brand Daily Data",
-                                     v_id='67375f0e-d8b5-4ef0-a98a-b1e71d26beb7',
+                          ViewConfig(v_name="Brand Devices Daily",
+                                     v_id='c6c0dfe6-4b48-4296-8592-e75bd522975c',
                                      date_chunks=True),
-                          ViewConfig(v_name="Asset and OS Summary Data",
-                                     v_id='197223c7-b106-4e3e-8812-55ee0749f6fd',
-                                     date_chunks=False),
-                          ViewConfig(v_name="Asset and OS Daily Data",
-                                     v_id='a8c3c60d-9c05-403b-94a8-0b4c8df374ae',
+                          ViewConfig(v_name="Asset & OS Total Daily",
+                                     v_id='aac0ec16-6258-4578-acf7-cf75eb8587df',
+                                     date_chunks=True),
+                          ViewConfig(v_name="Asset & OS Devices Daily",
+                                     v_id='4b98556e-ae1a-42ca-aa29-24fbb9792c48',
                                      date_chunks=True)
                           ])
 ]
