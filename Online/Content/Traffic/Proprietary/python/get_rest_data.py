@@ -151,10 +151,11 @@ def setup_connection():
     return auth_token, server, site_id
 
 
-def get_workbooks(server, auth_token, site_id):
+def get_workbooks():
     """
     Returns the workbooks for the site
     """
+    auth_token, server, site_id = setup_connection()
     url = server + "/api/{0}/sites/{1}/workbooks".format(VERSION, site_id)
     server_response = requests.get(url, headers={'x-tableau-auth': auth_token})
     _check_status(server_response, 200)
@@ -166,10 +167,11 @@ def get_workbooks(server, auth_token, site_id):
     return all
 
 
-def get_views(server, auth_token, site_id, workbook_id):
+def get_views(workbook_id):
     """
     Returns the views for a workbook
     """
+    auth_token, server, site_id = setup_connection()
     url = server + "/api/{0}/sites/{1}/workbooks/{2}/views".format(VERSION, site_id, workbook_id)
     server_response = requests.get(url, headers={'x-tableau-auth': auth_token})
     _check_status(server_response, 200)
