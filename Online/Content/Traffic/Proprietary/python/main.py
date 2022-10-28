@@ -13,4 +13,4 @@ if __name__ == "__main__":
     # Adapt this code to get filtered data by date
     get_data_with_rest()
 
-    get_data_with_rest_for_date(date(year=2022, month=5, day=1))
+    get_data_with_rest_for_date(date(year=2022, month=9, day=1))

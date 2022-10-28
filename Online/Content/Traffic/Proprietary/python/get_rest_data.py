@@ -248,6 +248,13 @@ def trim_newline(data):
     return data
 
 
+def remove_header_lines(data_df: pd.DataFrame) -> pd.DataFrame:
+    print(f"Dataframe before dropping empty rows: {data_df.shape[0]}")
+    data_df = data_df[data_df[0] != '']
+    print(f"Dataframe after dropping empty rows: {data_df.shape[0]}")
+    return data_df
+
+
 def format_numbers(data: pd.DataFrame, col: str):
     data[col].replace(',', '', inplace=True, regex=True)
     return data
@@ -258,6 +265,7 @@ def post_process(data: str) -> pd.DataFrame:
     data= data.rstrip("\r") # remove last empty line
     if data == '': return None
     data_df = pd.DataFrame([x.split(';') for x in data.split('\r')])
+    data_df = remove_header_lines(data_df)
     data_df = data_df.rename(columns=data_df.iloc[0]).drop(data_df.index[0])
     # Depending on the view you are accessing, you might need to adapt the following lines
     if 'Measure Values' in data_df:
