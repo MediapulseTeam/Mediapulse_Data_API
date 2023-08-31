@@ -10,6 +10,7 @@ pandas = "==1.4.3"
 python-certifi-win32 = "==1.6"
 requests = "==2.28.1"
 tableau-api-lib = "*"
+certifi="2023.7.22"
 
 [requires]
 python_version = "3.8"
